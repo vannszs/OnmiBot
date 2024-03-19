@@ -132,19 +132,17 @@ def Regist():
     login_button = driver.find_element(By.XPATH, '/html/body/div/header/div[3]/button[2]')
     login_button.click()
 
-
     # Dapatkan alamat email sementara
-    while True:
-        temp_email = get_temp_email()
-        if temp_email:
-            email_input = driver.find_element(By.XPATH, '//*[@id="form-submit"]/div[1]/input')
-            if email_input.get_attribute("value"):
-                # Jika sudah diisi, hapus isinya
-                email_input.clear()
-            email_input.send_keys(temp_email)
-            break   
-        else:
-            print("Gagal mendapatkan alamat email sementara.")
+    temp_email = get_temp_email()
+    if not temp_email:
+        print("Gagal mendapatkan alamat email sementara.")
+        return
+
+    email_input = driver.find_element(By.XPATH, '//*[@id="form-submit"]/div[1]/input')
+    if email_input.get_attribute("value"):
+        # Jika sudah diisi, hapus isinya
+        email_input.clear()
+    email_input.send_keys(temp_email)
 
     login, domain = temp_email.split('@')
     # Dapatkan password acak
@@ -164,32 +162,27 @@ def Regist():
     print("Menunggu Email Verifikasi")
     time.sleep(5)
 
-    while True:
+    # Coba untuk mendapatkan email verifikasi
+    for _ in range(30):  # Cobalah 30 kali, dengan interval 1 detik
         messages = get_messages(login, domain)
         if messages:
-            print("Pesan yang diterima:")
+            # Proses email jika ditemukan
             for message in messages:
-                print("ID:", message['id'])
-                print("Dari:", message['from'])
-                print("Subjek:", message['subject'])
-                print("Tanggal:", message['date'])
-                print("------------------------------------")
-                # Baca isi pesan
                 message_content = read_message(login, domain, message['id'])
                 if message_content:
-                    print("Berhasil Dapat Pesan")
-                    # Ekstrak link verifikasi
                     verification_link = extract_verification_link(message_content['htmlBody'])
                     if verification_link:
                         print("Link Verifikasi:", verification_link)
                         driver.get(verification_link)
                         ref(temp_email, random_password)
-                    else:
-                        print("gagal get link")
-                else:
-                    print("gagal get pesan")
-            else:
-                print("Menunggu pesan masuk")
+                        return
+        print("Menunggu pesan masuk")
+        time.sleep(1)
+    
+    # Jika tidak ada email verifikasi setelah 30 detik, beri tahu pengguna
+    print("Gagal mendapat email verifikasi.")
+    return
+
 
 
 def ref(mail, pas):
@@ -251,5 +244,6 @@ def ref(mail, pas):
     Regist()
 
 if __name__ == "__main__":
-    Regist()
+    while True:
+        Regist()
 
